@@ -1,192 +1,55 @@
-// ═══════════════════════════════════════════════
-//  2liv — Apps Script
-//  Cole este código no Apps Script da sua planilha
-// ═══════════════════════════════════════════════
-
-const PASTA_DRIVE_ID = '1M6HZnGKYafqXjcSW67ZRY23BkseARCcT';
-const ABA_NOME       = 'Ordens';          // nome da aba na planilha
-
-const COLUNAS = [
-  'Mês/Ano',
-  'Data/Hora Solicitação',
-  'Dias p/ Vencer',
-  'Status',
-  'Prioridade',
-  'Solicitante',
-  'E-mail',
-  'Evento',
-  'Data Evento',
-  'Fornecedor',
-  'CPF/CNPJ',
-  'Titular',
-  'PIX',
-  'Banco',
-  'Tipo Recebimento',
-  'Link Boleto',
-  'Forma Pagamento',
-  'Conta Pagamento',
-  'Centro de Custo',
-  'Tipo Documento',
-  'Link NF/Recibo',
-  'Condição',
-  'Total Ordem',
-  'Nº Parcelas',
-  'Intervalo',
-  'Parcelas (detalhes)',
-  'Descrição Item',
-  'Valor Item',
-  'Vencimento Item',
-  'Observações',
-  // Colunas do financeiro (preenchidas manualmente na planilha)
-  'Aprovado por',
-  'Motivo Recusa',
-  'NF/Recibo Confirmado',
-  'Contrato no Drive',
-  'Apto p/ Pagamento',
-  'Comprovante',
-  'Data Pagamento',
-];
-
-// ── Ponto de entrada ──────────────────────────
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const ss   = SpreadsheetApp.getActiveSpreadsheet();
-    const aba  = getOrCreateAba(ss);
-
-    // Garante cabeçalho
-    if (aba.getLastRow() === 0) {
-      aba.appendRow(COLUNAS);
-      aba.getRange(1, 1, 1, COLUNAS.length)
-        .setBackground('#1B4FD8')
-        .setFontColor('#ffffff')
-        .setFontWeight('bold');
-      aba.setFrozenRows(1);
-    }
-
-    const pasta = DriveApp.getFolderById(PASTA_DRIVE_ID);
-
-    // Upload do boleto (se houver)
-    let linkBoleto = '';
-    if (data.fileBoletoBase64 && data.nomeArquivoBoleto) {
-      linkBoleto = uploadArquivo(pasta, data.nomeArquivoBoleto, data.fileBoletoBase64, data.fileBoletoMime || 'application/octet-stream');
-    }
-
-    // Upload da NF ou Recibo
-    let linkDoc = '';
-    if (data.fileDocBase64 && data.nomeArquivoDoc) {
-      linkDoc = uploadArquivo(pasta, data.nomeArquivoDoc, data.fileDocBase64, data.fileDocMime || 'application/octet-stream');
-    }
-
-    // Parcelas resumidas
-    const parcelasStr = data.parcelas && data.parcelas.length
-      ? data.parcelas.map(p => 'P' + p.numero + ': R$ ' + p.valor + ' (' + p.vencimento + ')').join(' | ')
-      : '';
-
-    // Uma linha por item de pagamento
-    const items = data.items || [{}];
-    items.forEach(function(item) {
-      const linha = [
-        data.mesAno || '',
-        data.dataHoraSolicitacao || new Date().toLocaleString('pt-BR'),
-        item.diasParaVencer || '',
-        'Pendente',
-        data.prioridade || '',
-        data.solicitanteNome || '',
-        data.solicitanteEmail || '',
-        data.evento || '',
-        data.dataEvento || '',
-        data.fornecedor || '',
-        data.documento || '',
-        data.titular || '',
-        data.pix || '',
-        data.banco || '',
-        data.tipoRecebimento || '',
-        linkBoleto,
-        data.formaPagamento || '',
-        data.contaPagamento || '',
-        data.centroCusto || '',
-        data.tipoDocumento || '',
-        linkDoc,
-        data.condicao || '',
-        data.totalOrdem || '',
-        data.nParcelas || '',
-        data.intervalo || '',
-        parcelasStr,
-        item.descricao || '',
-        item.valor || '',
-        item.vencimento || '',
-        data.observacoes || '',
-        // Financeiro — vazios, preenchidos na planilha
-        '', '', '', '', '', '', '',
-      ];
-      aba.appendRow(linha);
-    });
-
-    // Formata a planilha
-    formatarAba(aba);
-
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, erro: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+luizpires@MacBook-Pro-de-luiz-2 ~ % >....                                                                                                                                                                            
+eight:400;font-size:.8rem;">/ '+s.nomeFant+'</span>':'')+'</div><div class="sup-doc">'+(s.doc||'—')+' '+(s.titular?'· '+s.titular:'')+'</div>'+(s.pix?'<div class="sup-pix">PIX: '+s.pix+'</div>':'')+(s.banco?'<div class="sup-banco">'+s.banco+(s.agencia?' · Ag: '+s.agencia:'')+(s.conta?' · Cta: '+s.conta:'')+'</div>':'')+(s.tel?'<div class="sup-banco">📞 '+s.tel+'</div>':'')+'<div class="sup-actions"><button class="btn-edit" onclick="openSupModal(\''+s.id+'\')">✏️ Editar</button><button class="btn-del" onclick="deleteSupplier(\''+s.id+'\')">🗑</button></div></div>').join('');
 }
-
-// ── Helpers ───────────────────────────────────
-function getOrCreateAba(ss) {
-  return ss.getSheetByName(ABA_NOME) || ss.insertSheet(ABA_NOME);
+function openSupModal(id){
+  var s=id?suppliers.find(function(x){return x.id===id;}):null;
+  document.getElementById('modalTitle').textContent=s?'Editar Fornecedor':'Novo Fornecedor';
+  document.getElementById('mSupId').value=s?s.id:'';
+  document.getElementById('mTipo').value=s?(s.tipo||''):'';
+  document.getElementById('mNome').value=s?s.nome:'';
+  document.getElementById('mNomeFant').value=s?(s.nomeFant||''):'';
+  document.getElementById('mDoc').value=s?(s.doc||''):'';
+  document.getElementById('mTitular').value=s?(s.titular||''):'';
+  document.getElementById('mPix').value=s?(s.pix||''):'';
+  document.getElementById('mBanco').value=s?(s.banco||''):'';
+  document.getElementById('mAgencia').value=s?(s.agencia||''):'';
+  document.getElementById('mConta').value=s?(s.conta||''):'';
+  document.getElementById('mTel').value=s?(s.tel||''):'';
+  toggleTipo();
+  document.getElementById('supModal').classList.add('open');
 }
-
-function uploadArquivo(pasta, nome, base64, mime) {
-  try {
-    const bytes = Utilities.base64Decode(base64);
-    const blob  = Utilities.newBlob(bytes, mime, nome);
-    const file  = pasta.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return file.getUrl();
-  } catch (e) {
-    return 'Erro no upload: ' + e.message;
-  }
+function deleteSupplier(id){if(!confirm('Excluir?'))return;suppliers=suppliers.filter(function(s){return s.id!==id;});saveSuppliers(suppliers);renderSuppliers(document.getElementById('supSearch').value);toast('Fornecedor removido','warn');}
+function closeSupModal(){closeModal('supModal');}
+function saveSupplier(){
+  var tipo=document.getElementById('mTipo').value;
+  var nome=document.getElementById('mNome').value.trim();
+  if(!tipo){toast('Selecione o tipo','err');return;}
+  if(!nome){toast('Informe o nome','err');return;}
+  var arr=loadSuppliers();
+  var existId=document.getElementById('mSupId').value;
+  var rec={id:existId||'sup_'+Date.now(),tipo:tipo,nome:nome,nomeFant:document.getElementById('mNomeFant').value.trim(),doc:document.getElementById('mDoc').value.trim(),titular:document.getElementById('mTitular').value.trim(),pix:document.getElementById('mPix').value.trim(),banco:document.getElementById('mBanco').value.trim(),agencia:document.getElementById('mAgencia').value.trim(),conta:document.getElementById('mConta').value.trim(),tel:document.getElementById('mTel').value.trim()};
+  arr=existId?arr.map(function(s){return s.id===existId?rec:s;}):[].concat(arr,[rec]);
+  saveSuppliers(arr);suppliers=arr;closeSupModal();renderSuppliers(document.getElementById('supSearch').value);toast(existId?'Fornecedor atualizado ✓':'Fornecedor cadastrado ✓');
 }
+function toggleTipo(){var t=document.getElementById('mTipo').value;document.getElementById('mDocLabel').textContent=(t==='PJ'?'CNPJ':'CPF')+' *';document.getElementById('mNomeFant_wrap').style.display=t==='PJ'?'block':'none';}
 
-function formatarAba(aba) {
-  const ultima = aba.getLastRow();
-  if (ultima < 2) return;
+// ── MASKS ────────────────────────────
+function maskDoc(el){var v=el.value.replace(/\D/g,'');if(v.length<=11)v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');else v=v.replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d{1,2})$/,'$1-$2');el.value=v;}
+function maskTel(el){var v=el.value.replace(/\D/g,'');if(v.length<=10)v=v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2');else v=v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2');el.value=v;}
+function maskCurEl(el){var v=el.value.replace(/\D/g,'');el.value=(parseInt(v||'0')/100).toFixed(2).replace('.',',');}
+function maskCur(el){maskCurEl(el);}
+function parseCur(s){return parseFloat((s||'0').replace(',','.'))||0;}
+function fmt(n){return n.toFixed(2).replace('.',',');}
 
-  // Larguras das colunas
-  aba.setColumnWidth(1, 80);   // Mês/Ano
-  aba.setColumnWidth(2, 160);  // Data/Hora
-  aba.setColumnWidth(4, 100);  // Status
-  aba.setColumnWidth(5, 110);  // Prioridade
-  aba.setColumnWidth(8, 180);  // Evento
-  aba.setColumnWidth(10, 180); // Fornecedor
-  aba.setColumnWidth(27, 220); // Descrição Item
+// ── MISC ─────────────────────────────
+document.addEventListener('click',function(e){if(!e.target.closest('.sg-wrap'))document.querySelectorAll('.sg-list').forEach(function(b){b.classList.remove('open');});});
+['supModal','rejectModal','compModal'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===el)el.classList.remove('open');});});
 
-  // Cor de fundo por status (coluna 4)
-  const statusRange = aba.getRange(2, 4, ultima - 1, 1);
-  const valores = statusRange.getValues();
-  valores.forEach(function(row, i) {
-    var cor = '#ffffff';
-    if (row[0] === 'Pendente')  cor = '#fff8e1';
-    if (row[0] === 'Aprovado')  cor = '#e8f5e9';
-    if (row[0] === 'Recusado')  cor = '#ffebee';
-    if (row[0] === 'Pago')      cor = '#e3f2fd';
-    aba.getRange(i + 2, 1, 1, COLUNAS.length).setBackground(cor);
-  });
+var toastTimer;
+function toast(msg,type){clearTimeout(toastTimer);var t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type==='err'?' err':type==='warn'?' warn':'');toastTimer=setTimeout(function(){t.classList.remove('show');},3200);}
+</script>
+</body>
+</html>
+cat ~/Downloads/ordem-pagamento.html | pbcopycat ~/Downloads/ordem-pagamento.html | pbcopycat ~/Downloads/ordem-pagamento.html | pbcopy
 
-  // Bordas
-  aba.getRange(1, 1, ultima, COLUNAS.length)
-    .setBorder(true, true, true, true, true, true);
-}
 
-// ── GET para teste ────────────────────────────
-function doGet() {
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, msg: '2liv Apps Script funcionando!' }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
